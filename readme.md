@@ -24,3 +24,6 @@ Compile the contracts using `npx hardhat compile`. The artifacts will be placed 
 
 To run the front-end application run `npm start` from the `/app` directory. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
+0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+acc 1 : 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+acc 2 : 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC

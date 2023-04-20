@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import Escrow from './Escrow';
 import deployContract from './deploy';
+import { useIPFSPersistence } from './useIPFSpersistence';
 // import dotenv from 'dotenv';
 // dotenv.config();
 
@@ -21,7 +22,9 @@ function App() {
 	const [escrows, setEscrows] = useState([]);
 	const [account, setAccount] = useState();
 	const [signer, setSigner] = useState();
+
 	// const signer = provider.getSigner();
+	const { storeDataOnIPFS, getData, updatedData } = useIPFSPersistence();
 	useEffect(() => {
 		async function getAccounts() {
 			console.log(provider);
@@ -35,8 +38,15 @@ function App() {
 			// const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 			// console.log(wallet);
 		}
+		// const getDataFromIPFS = async () => {
+		// 	const updatedEscrow = await getData(cid);
+
+		// 	setEscrows([...escrows, updatedEscrow]);
+		// };
 
 		getAccounts();
+		// getDataFromIPFS();
+		console.log(escrows);
 	}, []);
 
 	async function newContract() {
@@ -44,7 +54,7 @@ function App() {
 		const arbiter = document.getElementById('arbiter').value;
 		const value = document.getElementById('eth').value;
 		const amountInWei = ethers.utils.parseEther(value.toString());
-		// const valueInEther = ethers.utils.formatEther(value)
+
 		const escrowContract = await deployContract(
 			signer,
 			arbiter,
@@ -68,8 +78,13 @@ function App() {
 				await approve(escrowContract, signer);
 			},
 		};
+		const hash = await storeDataOnIPFS(escrow);
 
 		setEscrows([...escrows, escrow]);
+		const updatedEscrow = await getData();
+		console.log(`Data added to IPFS with hash: ${hash} and ${updatedData}`);
+		console.log(escrow);
+		console.log(hash);
 	}
 
 	return (

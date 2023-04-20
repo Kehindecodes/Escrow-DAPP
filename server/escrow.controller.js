@@ -1,3 +1,4 @@
+const { query } = require('express');
 const Escrow = require('./escrow.model');
 
 const createContract = async (req, res) => {
@@ -9,18 +10,18 @@ const createContract = async (req, res) => {
 		amount,
 		approved,
 	});
-	res.status(201).json({ newContract });
+	return res.status(201).json({ newContract });
 };
 
 const getContracts = async (req, res) => {
 	try {
 		const contracts = await Escrow.find({});
-		if ((contracts.length = 0)) {
+		if (contracts.length === 0) {
 			res.status(200).json({
 				message: 'No contract yet',
 			});
 		}
-		res.status(200).json({ contracts });
+		return res.status(200).json({ contracts });
 	} catch (error) {
 		console.log(error);
 	}
@@ -28,12 +29,15 @@ const getContracts = async (req, res) => {
 
 const updateContract = async (req, res) => {
 	try {
-		const { id: contractId } = req.params;
-		const updatedContracts = await Escrow.findOneAndUpdate({ _id: contractId });
-		res.status(200).json({ updatedContracts });
+		const { id } = req.params;
+		const { approved } = req.body;
+		const updatedContracts = await Escrow.findById(id);
+		updatedContracts.approved = approved;
+		await updatedContracts.save();
+		return res.status(200).json({ updatedContracts });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Internal server error' });
+		return res.status(500).json({ message: 'Internal server error' });
 	}
 };
 

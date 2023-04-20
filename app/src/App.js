@@ -2,7 +2,8 @@ import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import Escrow from './Escrow';
 import deployContract from './deploy';
-import { useIPFSPersistence } from './useIPFSpersistence';
+import useEscrowList from './useEscrowList';
+import axios from 'axios';
 // import dotenv from 'dotenv';
 // dotenv.config();
 
@@ -19,12 +20,39 @@ export async function approve(escrowContract, signer) {
 
 // const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 function App() {
-	const [escrows, setEscrows] = useState([]);
+	const escrowList = useEscrowList();
+	const [escrows, setEscrows] = useState(escrowList);
 	const [account, setAccount] = useState();
 	const [signer, setSigner] = useState();
+	const [arbiter, setArbiter] = useState(escrowList.arbiter);
+	const [beneficiary, setBeneficiary] = useState('');
+	const [amount, setAmount] = useState('');
+	const api = axios.create({
+		baseURL: 'http://localhost:8089',
+	});
 
+	const handleApprove = async (id) => {
+		const escrowContract = await deployContract(
+			signer,
+			arbiter,
+			beneficiary,
+			amount,
+		);
+
+		escrowContract.on('Approved', async () => {
+			const res = await api(`/escrows/${id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ approved: true }),
+			});
+			const updatedContract = await res.json();
+		});
+
+		await approve(escrowContract, signer);
+	};
 	// const signer = provider.getSigner();
-	const { storeDataOnIPFS, getData, updatedData } = useIPFSPersistence();
 	useEffect(() => {
 		async function getAccounts() {
 			console.log(provider);
@@ -38,11 +66,6 @@ function App() {
 			// const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 			// console.log(wallet);
 		}
-		// const getDataFromIPFS = async () => {
-		// 	const updatedEscrow = await getData(cid);
-
-		// 	setEscrows([...escrows, updatedEscrow]);
-		// };
 
 		getAccounts();
 		// getDataFromIPFS();
@@ -50,10 +73,11 @@ function App() {
 	}, []);
 
 	async function newContract() {
-		const beneficiary = document.getElementById('beneficiary').value;
-		const arbiter = document.getElementById('arbiter').value;
+		setBeneficiary(document.getElementById('beneficiary').value);
+		setArbiter(document.getElementById('arbiter').value);
 		const value = document.getElementById('eth').value;
 		const amountInWei = ethers.utils.parseEther(value.toString());
+		setAmount(amountInWei);
 
 		const escrowContract = await deployContract(
 			signer,
@@ -61,30 +85,17 @@ function App() {
 			beneficiary,
 			amountInWei,
 		);
-
 		const escrow = {
 			address: escrowContract.address,
 			arbiter,
 			beneficiary,
-			value: value.toString(),
-			handleApprove: async () => {
-				escrowContract.on('Approved', () => {
-					document.getElementById(escrowContract.address).className =
-						'complete';
-					document.getElementById(escrowContract.address).innerText =
-						"✓ It's been approved!";
-				});
-
-				await approve(escrowContract, signer);
-			},
+			amount: value.toString(),
+			approved: false,
 		};
-		const hash = await storeDataOnIPFS(escrow);
-
-		setEscrows([...escrows, escrow]);
-		const updatedEscrow = await getData();
-		console.log(`Data added to IPFS with hash: ${hash} and ${updatedData}`);
-		console.log(escrow);
-		console.log(hash);
+		const res = await api.post('/escrows', escrow);
+		const newEscrows = res.json();
+		console.log(newEscrows);
+		setEscrows([...escrowList, newEscrows.data.contracts]);
 	}
 
 	return (
@@ -122,9 +133,22 @@ function App() {
 				<h1> Existing Contracts </h1>
 
 				<div id='container'>
-					{escrows.map((escrow) => {
-						return <Escrow key={escrow.address} {...escrow} />;
-					})}
+					{escrowList.length === 0 ? (
+						<p>No contract yet</p>
+					) : (
+						escrowList.map((escrow) => {
+							return (
+								<Escrow
+									key={escrow._id}
+									arbiter={escrow.arbiter}
+									beneficiary={escrow.beneficiary}
+									value={escrow.amount}
+									approved={escrow.approved}
+									handleApprove={handleApprove(escrow.id)}
+								/>
+							);
+						})
+					)}
 				</div>
 			</div>
 		</>

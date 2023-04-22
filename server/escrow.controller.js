@@ -1,15 +1,22 @@
 const { query } = require('express');
 const Escrow = require('./escrow.model');
+const { deployContract } = require('./deploy');
+const CircularJSON = require('circular-json');
+const ethers = require('ethers');
 
 const createContract = async (req, res) => {
-	const { contractAddress, arbiter, beneficiary, amount, approved } = req.body;
+	const signer = req.body.account;
+	const { arbiter, beneficiary, amount, approved } = req.body.escrow;
+	const amountInWei = ethers.utils.parseEther(amount.toString());
+	deployContract(signer, arbiter, beneficiary, amountInWei);
 	const newContract = await Escrow.create({
-		contractAddress,
+		// contractAddress,
 		arbiter,
 		beneficiary,
 		amount,
 		approved,
 	});
+
 	return res.status(201).json({ newContract });
 };
 

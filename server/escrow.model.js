@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const EscrowSchema = new mongoose.Schema({
-	contactAddress: String,
+	// contactAddress: String,
 	arbiter: String,
 	beneficiary: String,
 	amount: Number,
